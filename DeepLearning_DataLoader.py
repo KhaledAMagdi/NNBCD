@@ -1,19 +1,20 @@
 import os
 import time
+import random
 import torch
 import pandas as pd
-from DenseNet_Model import DenseNet_Model
-from Inception_Model import Inception_Model
-from ResNet_Model import ResNet_Model
+from DeepLearning_Main import Run_Model
 
 
-def build_BreaKHis_dataframe(root_dir):
+def generate_split_manifest(root_dir, save_path="dataset_splits.xlsx"):
+    print("------------------------------------")
+    print("Generating new manifest....")
     data = []
-    for root, dirs, files in os.walk(root_dir):
+
+    for root, _, files in os.walk(root_dir):
         for file in files:
             if file.endswith('.png'):
                 file_path = os.path.join(root, file)
-
                 parts = os.path.normpath(file_path).split(os.sep)
 
                 label_str = parts[-6]
@@ -21,67 +22,136 @@ def build_BreaKHis_dataframe(root_dir):
                 patient_id = parts[-3]
                 magnification = parts[-2]
 
-                label = 0 if label_str == 'benign' else 1
-
                 data.append({
                     'image_path': file_path,
                     'patient_id': patient_id,
                     'tumor_type': tumor_type,
                     'magnification': magnification,
-                    'label': label
+                    'label': 0 if label_str == 'benign' else 1
                 })
 
     df = pd.DataFrame(data)
-    total_benign_images = df[df['label'] == 0].shape[0]
-    total_malignant_images = df[df['label'] == 1].shape[0]
-    total_benign_patients = df[df['label'] == 0]['patient_id'].nunique()
-    total_malignant_patients = df[df['label'] == 1]['patient_id'].nunique()
+    patient_labels = df.groupby('patient_id')['label'].first()
 
-    print(f"\nBenign Images: {total_benign_images} | "
-          f"Malignant Images: {total_malignant_images}")
-    print(f"Benign Patients: {total_benign_patients} | "
-          f"Malignant Patients: {total_malignant_patients}")
+    benign_patients    = patient_labels[patient_labels == 0].index.tolist()
+    malignant_patients = patient_labels[patient_labels == 1].index.tolist()
 
-    return df
+    random.seed(42)
+    random.shuffle(benign_patients)
+    random.shuffle(malignant_patients)
+
+    def split_patients(patient_list):
+        n = len(patient_list)
+        train_end = int(n * 0.70)
+        val_end   = train_end + int(n * 0.15)
+
+        train_set = set(patient_list[:train_end])
+        val_set   = set(patient_list[train_end:val_end])
+        test_set  = set(patient_list[val_end:])
+
+        return train_set, val_set, test_set
+
+    b_train, b_val, b_test = split_patients(benign_patients)
+    m_train, m_val, m_test = split_patients(malignant_patients)
+
+    train_patients = b_train.union(m_train)
+    val_patients   = b_val.union(m_val)
+
+    def assign_split(pid):
+        if pid in train_patients: return 'train'
+        if pid in val_patients: return 'val'
+        return 'test'
+
+    df['split'] = df['patient_id'].apply(assign_split)
+
+    train_patients = df[df['split'] == 'train']['patient_id'].nunique()
+    val_patients   = df[df['split'] == 'val']['patient_id'].nunique()
+    test_patients  = df[df['split'] == 'test']['patient_id'].nunique()
+
+    print(f"Total Patient Split -> Train: {train_patients} | "
+          f"Val: {val_patients} | Test: {test_patients}")
+    print("Image Level Summary:")
+    print(df.groupby(['split', 'label']).size().unstack(fill_value=0))
+
+    df.to_excel(save_path, index=False)
+    print(f"\nManifest saved to: {save_path}")
+
+
+def load_BreaKHis_manifest(manifest_path):
+    print("Loading Dataset Manifest...")
+    try:
+        df = pd.read_excel(manifest_path)
+        train_patients = df[df['split'] == 'train']['patient_id'].nunique()
+        val_patients   = df[df['split'] == 'val']['patient_id'].nunique()
+        test_patients  = df[df['split'] == 'test']['patient_id'].nunique()
+        print(f"Total Patient Split -> Train: {train_patients} | "
+              f"Val: {val_patients} | Test: {test_patients}")
+        print("Image Level Summary:")
+        print(df.groupby(['split', 'label']).size().unstack(fill_value=0))
+        return df
+    except FileNotFoundError:
+        print("Dataset Manifest not found.")
+        generate_split_manifest("BreaKHis_v1", manifest_path)
+        return pd.read_excel(manifest_path)
 
 
 def main():
-    #-------------------------------------------------#
+    #--------------------------------------------------------------------------------------------------#
+    print("------------------------------------")
+    print("--- Deep Learning Model Training ---")
+    print("------------------------------------")
+    #--------------------------------------------------------------------------------------------------#
     #---System Check---#
     torch.backends.cudnn.benchmark = True
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"System Check: Using {device.type.upper()}")
-
-    #-------------------------------------------------#
+    print(f"-> System Check: Using {device.type.upper()}")
+    print("------------------------------------")
+    #--------------------------------------------------------------------------------------------------#
     #---Data Preparation---#
-    dataset_path = "BreaKHis_v1"
-    df = build_BreaKHis_dataframe(dataset_path)
-
-    #-------------------------------------------------#
+    df = load_BreaKHis_manifest("dataset_splits.xlsx")
+    print("------------------------------------")
+    #--------------------------------------------------------------------------------------------------#
     #---DenseNet---#
-    pretrained_model_path = "DenseNetModels/MultiFactorTrackers/Densenet_Cla_TTAFocalSampler_v2_loss.pth"
-    save_path = "DenseNetModels/Densenet_vxx" #save path without ".pth" as it auto assigns
-    DenseNet_Model(df.copy(), device, pretrained_model_path, save_path)
-
-    #-----------------------------------------------------------------------------------------------------------------#
+    print("---------- DenseNet Model ----------")
+    pretrained_model_path = "DenseNetModels/Densenet_TH_Cla_auc.pth"
+    save_path = "DenseNetModels/Densenet_TH_T1_ClaD4N5_auc"
+    name = 'densenet'
+    Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
+    print("------------------------------------")
+    #--------------------------------------------------------------------------------------------------#
     #---ResNet---#
-    pretrained_model_path  = "ResNetModels/Resnet_Cla_v0_auc.pth"
-    save_path = "ResNetModels/Resnet_0_ClaL4_v0_auc"
-    ResNet_Model(df.copy(), device, pretrained_model_path, save_path)
-
-    #-----------------------------------------------------------------------------------------------------------------#
+    # print("----------- ResNet Model -----------")
+    # pretrained_model_path  = "ResNetModels/Resnet_"
+    # save_path = "ResNetModels/Resnet_"
+    # name = 'resnet'
+    # Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
+    # print("------------------------------------")
+    #--------------------------------------------------------------------------------------------------#
     # ---Inception---#
-    pretrained_model_path = "InceptionModels/Inception_x.pth"
-    save_path = "InceptionModels/Inception_x"
-    Inception_Model(df.copy(), device, pretrained_model_path, save_path)
-
-    # -----------------------------------------------------------------------------------------------------------------#
+    # print("---------- Inception Model ---------")
+    # pretrained_model_path = "InceptionModels/Inception_"
+    # save_path = "InceptionModels/Inception_"
+    # name = 'inception'
+    # Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
+    # print("------------------------------------")
+    #--------------------------------------------------------------------------------------------------#
+    #---YOLO---#
+    # print("------------ YOLO Model ------------")
+    # pretrained_model_path = "YOLOModels/YOLO_x.pth"
+    # save_path = "YOLOModels/YOLO_x1"
+    # YOLO_Model(df.copy(), device, pretrained_model_path, save_path)
+    # print("------------------------------------")
+    #--------------------------------------------------------------------------------------------------#
 
 
 if __name__ == "__main__":
+    # dataset_path = "BreaKHis_v1"
+    # output_excel = "dataset_splits.xlsx"
+    # generate_split_manifest(dataset_path, output_excel)
+
     start = time.perf_counter()
     main()
     end = time.perf_counter()
-    print("\n" + "-" * 30)
+    print("\n" + "-" * 36)
     print(f"Elapsed time: {end - start:.6f} seconds")
-    print("-" * 30)
+    print("-" * 36)
