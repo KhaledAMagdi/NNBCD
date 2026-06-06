@@ -1,5 +1,4 @@
 import modal
-from sympy import false
 
 app = modal.App("breakhis-classifier")
 
