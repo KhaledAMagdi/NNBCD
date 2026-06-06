@@ -91,7 +91,7 @@ def load_BreaKHis_manifest(manifest_path):
         return df
     except FileNotFoundError:
         print("Dataset Manifest not found.")
-        generate_split_manifest("BreaKHis_v1", manifest_path)
+        generate_split_manifest("G:/datasets/BreaKHis_v1", manifest_path)
         print("------------------------------------")
         return pd.read_excel(manifest_path)
 
@@ -119,19 +119,20 @@ def main():
     #--------------------------------------------------------------------------------------------------#
     #---DenseNet---#
 
-    print("---------- DenseNet Model ----------")
-    pretrained_model_path = "Models/DenseNetModels/Densenet_TH_T1_ClaD4N5_auc_f1.pth"
-    save_path = "Models/DenseNetModels/Densenet_TH_T2_ClaD4N5_auc_f1"
-    name = 'densenet'
-    Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
-    print("------------------------------------")
+    # print("---------- DenseNet Model ----------")
+    # pretrained_model_path = "Models/DenseNetModels/Densenet_x.pth" # or None if training a new model
+    # save_path = "Models/DenseNetModels/Densenet_x"
+    # # path without ".pth", as in training we save 3 models, path gets appended with "_auc/f1/loss.pth"
+    # name = 'densenet'
+    # Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
+    # print("------------------------------------")
 
     #--------------------------------------------------------------------------------------------------#
     #---ResNet---#
 
     # print("----------- ResNet Model -----------")
-    # pretrained_model_path  = "Models/ResNetModels/Resnet_v1_T1_auc_f1.pth"
-    # save_path = "Models/ResNetModels/Resnet_v1_T2_auc_f1"
+    # pretrained_model_path  = "Models/ResNetModels/Resnet_x.pth"
+    # save_path = "Models/ResNetModels/Resnet_x"
     # name = 'resnet'
     # Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
     # print("------------------------------------")
@@ -139,12 +140,12 @@ def main():
     #--------------------------------------------------------------------------------------------------#
     # ---Inception---#
 
-    # print("---------- Inception Model ---------")
-    # pretrained_model_path = "Models/InceptionModels/Inception_v10_Cla_auc.pth"
-    # save_path = "Models/InceptionModels/Inception_v10_Cla_auc"
-    # name = 'inception'
-    # Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
-    # print("------------------------------------")
+    print("---------- Inception Model ---------")
+    pretrained_model_path = None
+    save_path = "Models/InceptionModels/Inception_v67_Cla"
+    name = 'inception'
+    Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
+    print("------------------------------------")
 
     #--------------------------------------------------------------------------------------------------#
 
