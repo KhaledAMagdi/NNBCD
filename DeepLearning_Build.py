@@ -1,7 +1,6 @@
 import copy
 import time
 import torch
-import gc
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -15,7 +14,6 @@ from torchvision.ops import sigmoid_focal_loss
 from torch.optim.lr_scheduler import LinearLR, ReduceLROnPlateau
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, recall_score, confusion_matrix, roc_curve
-import sklearn.metrics as skm
 from DeepLearning_Build import build_model
 
 

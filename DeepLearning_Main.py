@@ -51,6 +51,7 @@ def build_densenet_model(device, retrain, UF_flag, weights_path):
 def build_resnet_model(device, retrain, UF_flag, weights_path):
     print("\nDownloading and Building ResNet-50...")
     model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
+
     in_features = model.fc.in_features
     model.fc = nn.Sequential(
         nn.Linear(in_features, 1024),
@@ -91,7 +92,6 @@ def build_inception_model(device, retrain, UF_flag, weights_path):
     model = timm.create_model('inception_resnet_v2', pretrained=True)
 
     in_features = model.classif.in_features
-
     model.classif = nn.Sequential(
         nn.Linear(in_features, 1024),
         nn.ReLU(),

@@ -3,7 +3,7 @@ import time
 import random
 import torch
 import pandas as pd
-from DeepLearning_Main import Run_Model,execute_ensemble
+from DeepLearning_Main import Run_Model
 
 def generate_split_manifest(root_dir, save_path="dataset_splits.xlsx"):
     print("------------------------------------")
@@ -91,7 +91,7 @@ def load_BreaKHis_manifest(manifest_path):
         return df
     except FileNotFoundError:
         print("Dataset Manifest not found.")
-        generate_split_manifest("G:/datasets/BreaKHis_v1", manifest_path)
+        generate_split_manifest("BreaKHis_v1", manifest_path)
         print("------------------------------------")
         return pd.read_excel(manifest_path)
 
