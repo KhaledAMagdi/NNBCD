@@ -3,7 +3,7 @@ import time
 import random
 import torch
 import pandas as pd
-from DeepLearning_Main import Run_Model
+from DeepLearning_Main import Run_Model,execute_ensemble
 
 def generate_split_manifest(root_dir, save_path="dataset_splits.xlsx"):
     print("------------------------------------")
@@ -87,67 +87,68 @@ def load_BreaKHis_manifest(manifest_path):
               f"Val: {val_patients} | Test: {test_patients}")
         print("Image Level Summary:")
         print(df.groupby(['split', 'label']).size().unstack(fill_value=0))
+        print("------------------------------------")
         return df
     except FileNotFoundError:
         print("Dataset Manifest not found.")
-        generate_split_manifest("BreaKHis_v1", manifest_path)
+        generate_split_manifest("G:/datasets/BreaKHis_v1", manifest_path)
+        print("------------------------------------")
         return pd.read_excel(manifest_path)
 
 
 def main():
     #--------------------------------------------------------------------------------------------------#
+
     print("------------------------------------")
     print("--- Deep Learning Model Training ---")
     print("------------------------------------")
+
     #--------------------------------------------------------------------------------------------------#
     #---System Check---#
+
     torch.backends.cudnn.benchmark = True
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"-> System Check: Using {device.type.upper()}")
     print("------------------------------------")
+
     #--------------------------------------------------------------------------------------------------#
     #---Data Preparation---#
+
     df = load_BreaKHis_manifest("dataset_splits.xlsx")
-    print("------------------------------------")
+
     #--------------------------------------------------------------------------------------------------#
     #---DenseNet---#
+
     print("---------- DenseNet Model ----------")
-    pretrained_model_path = "DenseNetModels/Densenet_TH_T1_ClaD4N5_auc_f1.pth"
-    save_path = "DenseNetModels/Densenet_TH_T2_ClaD4N5_auc_f1"
+    pretrained_model_path = "Models/DenseNetModels/Densenet_TH_T1_ClaD4N5_auc_f1.pth"
+    save_path = "Models/DenseNetModels/Densenet_TH_T2_ClaD4N5_auc_f1"
     name = 'densenet'
     Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
     print("------------------------------------")
+
     #--------------------------------------------------------------------------------------------------#
     #---ResNet---#
+
     # print("----------- ResNet Model -----------")
-    # pretrained_model_path  = "ResNetModels/Resnet_v1_T1_auc_f1.pth"
-    # save_path = "ResNetModels/Resnet_v1_T2_auc_f1"
+    # pretrained_model_path  = "Models/ResNetModels/Resnet_v1_T1_auc_f1.pth"
+    # save_path = "Models/ResNetModels/Resnet_v1_T2_auc_f1"
     # name = 'resnet'
     # Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
     # print("------------------------------------")
+
     #--------------------------------------------------------------------------------------------------#
     # ---Inception---#
+
     # print("---------- Inception Model ---------")
-    # pretrained_model_path = "InceptionModels/Inception_v1_T1_auc_auc.pth"
-    # save_path = "InceptionModels/Inception_v2_T1_auc_auc"
+    # pretrained_model_path = "Models/InceptionModels/Inception_v10_Cla_auc.pth"
+    # save_path = "Models/InceptionModels/Inception_v10_Cla_auc"
     # name = 'inception'
     # Run_Model(df.copy(), device, name, pretrained_model_path, save_path)
     # print("------------------------------------")
-    #--------------------------------------------------------------------------------------------------#
-    #---YOLO---#
-    # print("------------ YOLO Model ------------")
-    # pretrained_model_path = "YOLOModels/YOLO_x.pth"
-    # save_path = "YOLOModels/YOLO_x1"
-    # YOLO_Model(df.copy(), device, pretrained_model_path, save_path)
-    # print("------------------------------------")
-    #--------------------------------------------------------------------------------------------------#
 
+    #--------------------------------------------------------------------------------------------------#
 
 if __name__ == "__main__":
-    # dataset_path = "BreaKHis_v1"
-    # output_excel = "dataset_splits.xlsx"
-    # generate_split_manifest(dataset_path, output_excel)
-
     start = time.perf_counter()
     main()
     end = time.perf_counter()
